@@ -1,0 +1,80 @@
+#! /usr/bin/perl
+
+use IO::Socket;
+use IO::Socket::INET;
+use IO::Socket::INET6;
+use IO::File;
+use POSIX qw(strftime);
+use strict;
+use warnings;
+
+my @ip_addresses=$ENV{IP_ADDR};
+my $report_to=$ENV{REPORT_TO};
+
+sub check_ips {
+
+    my @ip_addresses_found;
+
+    my $all_ip_addresses_found=1;
+
+    foreach my $ip_address (@ip_addresses)
+    {
+	my $domain = $ip_address =~ /:/ ? AF_INET6:AF_INET;
+
+	my $socket = IO::Socket->new(
+	    Domain => $domain,
+	    LocalAddr => $ip_address,
+	    LocalPort => 0,
+	);
+
+	if ($socket)
+	{
+	    push @ip_addresses_found, $ip_address;
+	}
+	else
+	{
+	    $all_ip_addresses_found=0;
+	}
+    }
+    return {
+	ip_addresses_found          => \@ip_addresses_found,
+	all_ip_addresses_found      => $all_ip_addresses_found,
+	timestamp                   => strftime("%H:%M:%S", localtime),
+    };
+}
+
+my @report;
+
+my $first_attempt=check_ips();
+
+exit 0 if $first_attempt->{all_ip_addresses_found};
+
+push @report, $first_attempt;
+
+foreach (2..30)
+{
+    sleep(1);
+    my $next_attempt=check_ips();
+    push @report, $next_attempt;
+    last if $next_attempt->{all_ip_addresses_found};
+}
+
+if ($report_to)
+{
+    my $mail=IO::File->new("| sendmail");
+
+    print $mail "To: $report_to\n";
+    print $mail "Subject: systemd network initialization unfrak report\n\n";
+
+    print $mail "Time     IP addresses\n";
+    print $mail "======== ==================\n";
+
+    foreach my $log (@report)
+    {
+	print $mail sprintf("%s %s\n", $log->{timestamp},
+	    join(" ", @{$log->{ip_addresses_found}}));
+    }
+    close($mail);
+}
+
+exit 0;

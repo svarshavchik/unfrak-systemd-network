@@ -1,0 +1,10 @@
+# Configuration for the unfrak-systemd-network script
+#
+# Set IP_ADDR to the list of static IP addresses that should be configured
+# during the system boot.
+IP_ADDR=""
+
+# Optionally set REPORT_TO to an email address where a successful unfrak
+# gets reported to.
+
+REPORT_TO=""

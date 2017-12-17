@@ -1,0 +1,47 @@
+Summary: Make sure that the network is unfraked at boot
+Name: unfrak-systemd-network
+Version: @VERSION@
+Release: 1
+License: GPL
+URL: https://github.com/svarshavchik/unfrak-systemd-network
+Source0: %{name}-%{version}.tar.gz
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+BuildArch: noarch
+%{?systemd_requires}
+BuildRequires: systemd
+
+%description
+Makes sure that the network-online.target really works.
+
+%prep
+%setup -q
+%configure --with-unitdir=%{_unitdir}
+%build
+%{__make}
+
+%install
+rm -rf $RPM_BUILD_ROOT
+%{__make} install DESTDIR=$RPM_BUILD_ROOT
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%post
+%systemd_post unfrak-systemd-network.service
+
+%preun
+%systemd_preun unfrak-systemd-network.service
+
+%postun
+%systemd_postun unfrak-systemd-network.service
+
+%files
+%defattr(-,root,root,-)
+%doc COPYING README
+%config(noreplace) %{_sysconfdir}/sysconfig/*
+%{_sbindir}/*
+%{_unitdir}/*
+
+%changelog
+* Sun Dec 17 2017 Sam Varshavchik <mrsam@octopus.email-scan.com> - systemd-network
+- Initial build.

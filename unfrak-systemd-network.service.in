@@ -1,0 +1,13 @@
+[Unit]
+Description=Unfrak systemd network startup
+After=NetworkManager-wait-online.service systemd-networkd-wait-online.service
+Before=network-online.target
+
+[Service]
+EnvironmentFile=@sysconfdir@/sysconfig/unfrak-systemd-network
+Type=oneshot
+ExecStart=@sbindir@/unfrak-systemd-network
+RemainAfterExit=yes
+
+[Install]
+WantedBy=network-online.target

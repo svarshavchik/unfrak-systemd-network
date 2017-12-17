@@ -1,0 +1,99 @@
+systemd unfrak project
+======================
+
+unfraks systemd network configuration at boot time, on Fedora. Many
+services, like privoxy, innd, etc..., bind to specific IP addresses when
+they start up. They will fail to come up if their IP address is not
+configured yet.
+
+Unfortunately, making sure that all IP addresses get configured, before
+those services get started, seems to be an impossible task. The
+NetworkManager-wait-online service is diligently enabled. Multiple bug
+reports, to make sure all services' systemd service config files have
+a proper dependency on the network-online target, are resolved.
+
+Still, it just doesn't look like it work reliably all the time. My
+reboots get occasionally raked up because the IP addresses aren't set
+up yet when privoxy, and other service start.
+
+It might seem like things go sideways in NetworkManager, and not systemd.
+A very good argument is that as long as systemd kick off
+NetworkManager-wait-online, then waits for it to finish before starting
+everything that depends on network-online.target. This is a reasonable
+argument, but, still, the overall design of the whole process gets
+dictated by systemd, with NetworkManager trying to fit into the mold.
+Furthermore, NetworkManager is now tightly coupled to systemd. It doesn't
+really matter, I only want my servers to boot correctly. That's not too
+much to ask, but looks like it's necessary to explicitly unfrak it, to
+make sure of that.
+
+Anyway, the systemd unfrak project attempts to make network configuration
+reliably available at boot time by having another service that
+network-online.target depends on. The service kicks off a one-shot script
+called "unfrak-systemd-network". The script waits a maximum of 30 seconds,
+polling once a second until all IP addresses it expects to see can be bound,
+and immediately terminates when they are. This is not a novel concept.
+It's rumored that introducing explicit boot delays, in order for get a
+reliable network environment, is a common fix. This script should keep
+the boot delay to an absolute minimum.
+
+Instructions:
+
+1. Make sure that "systemctl enable NetworkManager-wait-online" was done.
+Or perhaps systemd-networkd-wait-online instead of NetworkManager-wait-online
+(if your systemd-networkd is similarly fraked).
+
+2. You need to have autoconf, automake, and rpm-build packages installed
+   (in addition to git).
+
+3. Execute the following sequence of commands:
+
+git clone https://github.com/svarshavchik/unfrak-systemd-network.git
+cd unfrak-systemd-network
+aclocal
+automake --foreign --add-missing
+autoconf
+./configure
+make dist
+
+4. This will build an unfrak-systemd-network-<VERSION>.tar.gz file, then:
+
+rpmbuild -ta unfrak-systemd-network-<VERSION>.tar.gz
+
+5. This creates an installable RPM file. You can ignore the .src.rpm,
+and install the main one, and activate it:
+
+rpm -i $HOME/rpmbuild/RPMS/noarch/unfrak-systemd-network-<VERSION>-1.noarch.rpm
+
+systemctl daemon-reload
+
+systemctl enable unfrak-systemd-network
+
+6. After making sure that unfrak-systemd-network is enabled, edit
+/etc/sysconfig/unfrak-systemd-network. Add your system's static IP addresses
+to the IP_ADDR setting. Optionally put your E-mail address into the REPORT_TO
+setting if there's a mail server running on this server, and it is
+operational by this point during the system boot (most are), and you would
+like to be notified every time the boot was successfully unfraked.
+
+7. This is going to install the "unfrak-systemd-network" script and execute
+it during system boot, to hopefully fix things up.
+
+Important: test the script by manually running:
+
+systemctl start unfrak-systemd-network
+
+Then as soon as this returns run "systemctl status unfrak-systemd-network",
+and the "ps" command, for good measure, to verify that the script is NOT
+running. If it's running it means that there's a typo in IP_ADDR, and the
+script is waiting for the typo-ed IP addresses to become available.
+
+You should see something like this, from the output of the
+"systemctl status unfrak-systemd-network" command:
+
+Dec 16 22:20:27 octopus.email-scan.com systemd[1]: Starting Unfrak systemd netwo
+Dec 16 22:20:28 octopus.email-scan.com systemd[1]: Started Unfrak systemd networ
+
+The script should not take more than a few seconds to run.
+
+8. Congratulation, your boot should be now unfraked, going forward.
