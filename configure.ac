@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([unfrak-systemd-network], [1.0], [mrsam@courier-mta.com])
+AC_INIT([unfrak-systemd-network], [1.01], [mrsam@courier-mta.com])
 
 # Checks for programs.
 AM_INIT_AUTOMAKE

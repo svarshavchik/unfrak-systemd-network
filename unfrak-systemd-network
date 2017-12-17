@@ -8,7 +8,7 @@ use POSIX qw(strftime);
 use strict;
 use warnings;
 
-my @ip_addresses=$ENV{IP_ADDR};
+my @ip_addresses=split(/[\s,]_/,$ENV{IP_ADDR});
 my $report_to=$ENV{REPORT_TO};
 
 sub check_ips {
